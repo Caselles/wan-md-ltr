@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Fresco Viewer — Centered + Continuous Zoom</title>
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* Black canvas viewport */
+        #viewport {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            cursor: grab;
+        }
+
+        #viewport:active {
+            cursor: grabbing;
+        }
+
+        /* Frame always equals viewport size. We pan/zoom this as a unit. */
+        #frame {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: 50% 50%;
+            /* scale around center */
+            will-change: transform;
+            display: flex;
+            /* perfect centering of the video */
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            /* black around the video */
+        }
+
+        /* Video is purely CSS-fitted: always fully visible at scale=1 */
+        #vid {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            /* key: fully visible, centered */
+            display: block;
+            background: #000;
+            user-select: none;
+            pointer-events: none;
+            /* drag anywhere to pan */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="viewport">
+        <div id="frame">
+            <video id="vid" src="fresco_MD_LT_2135x3200_win480x832_ov70.mp4" autoplay loop muted playsinline
+                preload="metadata"></video>
+        </div>
+    </div>
+
+    <script>
+        const viewport = document.getElementById('viewport');
+        const frame = document.getElementById('frame');
+
+        // Panzoom on the FRAME (which already shows the video fully, centered)
+        const panzoom = Panzoom(frame, {
+            startScale: 1,        // already perfectly fitted by CSS
+            startX: 0, startY: 0, // no offset needed
+            maxScale: 16,
+            minScale: 0.1,        // you can zoom out below fit if you want
+            step: 0.3,            // wheel sensitivity (increase for faster)
+            contain: 'none',      // free pan
+            bounds: false
+        });
+
+        // Wheel zoom anywhere
+        viewport.addEventListener('wheel', panzoom.zoomWithWheel, { passive: false });
+
+        // Keep the frame’s initial identity transform on load/resize
+        function resetToFittedView() {
+            // Because CSS keeps the video contained+centered inside #frame at scale 1,
+            // we just ensure identity transform on the frame.
+            panzoom.zoom(1, { animate: false });
+            panzoom.pan(0, 0, { relative: false });
+        }
+
+        // Reset on ready and when viewport size changes
+        document.addEventListener('DOMContentLoaded', resetToFittedView);
+        window.addEventListener('resize', resetToFittedView);
+
+        // Optional: double-click toggles between fit (1) and 1:1 pixels
+        viewport.addEventListener('dblclick', (e) => {
+            const current = panzoom.getScale();
+            const target = Math.abs(current - 1) < 0.001 ? 1 : 1; // keep as-is or customize
+            panzoom.zoomToPoint(target === 1 ? 1 : target, { clientX: e.clientX, clientY: e.clientY }, { animate: true });
+        });
+    </script>
+</body>
+
+</html>
